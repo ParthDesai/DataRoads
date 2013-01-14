@@ -1,0 +1,181 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3&sensor=false"></script>
+    <script type="text/javascript">
+
+
+    var Vehicles = [];
+    var count = 0;
+    var infoWindow = null;
+    var streetPanorama = null;
+    
+
+    var marker = [];
+    var map;
+    var contentString = '';
+
+    google.load("feeds", "1");
+
+    function removeMarkers()
+    {
+	for(var i = 0 ; i < marker.length ; i++)
+	{
+		marker[i].setMap(null);
+	}
+        loadFeed();
+    }
+
+    function PrepareMap()
+    {
+      
+      var MapEnd1 = new google.maps.LatLng(50.907623, 4.415904);
+      var MapEnd2 = new google.maps.LatLng(59.327383, 18.06747);
+      
+
+      
+      
+      var mapOptions = {
+          zoom: 8,
+          mapTypeId: google.maps.MapTypeId.ROADMAP,
+          center: MapEnd1
+        };
+
+        if(!map)
+	{
+            map = new google.maps.Map(document.getElementById('MapView'),
+                mapOptions);
+	}
+
+        if(!infoWindow)
+	{
+		var infoWindow = new google.maps.InfoWindow({
+                             content: contentString
+                            });
+	}
+
+        if(!streetPanorama)
+	{
+                
+		streetPanorama = new google.maps.StreetViewPanorama(document.getElementById("StreetView"));
+	}
+	
+        marker = [];
+        
+        for(var i = 0 ; i < count ; i++)
+	{
+           	var tempmarker = new google.maps.Marker({
+          	map:map,
+          	draggable:true,
+          	animation: google.maps.Animation.DROP,
+          	position: new google.maps.LatLng(Vehicles[i + "lattitude"],Vehicles[i + "longitude"]),
+        	});
+
+                marker[i] = tempmarker;
+                
+                tempmarker["title"] = Vehicles[i + "title"] ;
+	        tempmarker["directions"] = Vehicles[i + "directions"] ;
+                tempmarker["lattitude"] = Vehicles[i + "lattitude"] ;
+	        tempmarker["longitude"] = Vehicles[i + "longitude"] ;
+                tempmarker["speed"] = Vehicles[i + "Speed"] ;
+                
+                
+                if(Vehicles[i + "Speed"] > 0)
+		{
+			tempmarker.setIcon("RunningCar.png");
+		}
+		else
+		{
+			tempmarker.setIcon("StoppedCar.png");
+		}
+                 
+                google.maps.event.addListener(marker[i], 'click', function() {
+                      
+                      
+                      infoWindow.setContent('<html><head><title>Car Info</title></head><body><h2>Info:</h2><br/>' + 'Car Title :' + this['title'] + '<br/>' + 'Car speed :' + this['speed'] + '<br/>');
+                      infoWindow.open(map,this);
+                      streetPanorama.setPosition(new google.maps.LatLng(this['lattitude'],this['longitude']));
+                      streetPanorama.setPov({heading:parseInt(this["directions"]),zoom:0,pitch:0});
+                      
+                });
+                
+                
+        	
+	}
+
+
+        
+	window.setInterval(removeMarkers,1000 * 60);
+    
+  	
+    }
+
+
+    function loadFeed()
+    {
+	var feed = new google.feeds.Feed("https://dataroads.apps4you.com/Portal/RSS/?roleName=square%20melon&roleId=247");
+
+      feed.setResultFormat(google.feeds.Feed.XML_FORMAT);
+    
+      feed.setNumEntries(6);
+      
+      feed.load(function(result)
+      {
+        
+        if (!result.error) 
+        {
+          var container = document.getElementById("feed");
+          var items = result.xmlDocument.getElementsByTagName('item');
+          for (var i = 0; i < items.length; i++) 
+          {
+            var item = items[i];
+   
+	    var title = google.feeds.getElementsByTagNameNS(item,'*',"title")[0].firstChild.nodeValue;
+	    var directions = google.feeds.getElementsByTagNameNS(item,'*',"direction")[0].firstChild.nodeValue;
+            var PositionAttributes = google.feeds.getElementsByTagNameNS(item,'*',"positions")[0].firstChild.attributes;
+            var lattitude = PositionAttributes.getNamedItem("latitude").nodeValue;
+	    var longitude = PositionAttributes.getNamedItem("longitude").nodeValue;
+            var Speed = google.feeds.getElementsByTagNameNS(item,'*',"speed")[0].firstChild.nodeValue;
+            Vehicles[i + "title"] = title;
+	    Vehicles[i + "directions"] = directions;
+            Vehicles[i + "lattitude"] = lattitude;
+	    Vehicles[i + "longitude"] = longitude;
+            Vehicles[i + "Speed"] = Speed;
+            
+          }
+          count = items.length;
+          PrepareMap();
+        }
+        
+        
+      });
+      
+    }
+
+
+    
+
+    function startApp() 
+    {
+      loadFeed();
+      
+      
+    }
+    google.setOnLoadCallback(startApp);
+
+    
+    
+
+    </script>
+  </head>
+  <body>
+    
+    <table>
+    <tr>
+	<td><div id="MapView" style="width: 480px; height: 400px; display: inline-block;"></div></td>
+	<td><div id="StreetView" style="width: 480px; height: 400px; display: inline-block;"></div></td>
+    </tr>
+
+    </table>
+  </body>
+</html>
